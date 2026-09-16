@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Горы клуба</h1>
+  <p>Учёт восхождений, групп и отчётов альпинистского клуба</p>
+</section>
+<section class="card">
+  <h2>Список гор</h2>
+  {% if mountains %}
+  <table>
+    <tr><th>Название</th><th>Страна</th><th>Регион</th><th>Высота, м</th></tr>
+    {% for m in mountains %}
+    <tr>
+      <td>{{ m.name }}</td>
+      <td>{{ m.country }}</td>
+      <td>{{ m.region or "—" }}</td>
+      <td>{{ m.height_m }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">Пока ничего не добавлено.</p>
+  {% endif %}
+</section>
+{% endblock %}

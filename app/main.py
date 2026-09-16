@@ -2,10 +2,12 @@ import os
 from datetime import date
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app import ui
 from app.db import get_db
 from app.models import (
     Ascent,
@@ -38,6 +40,9 @@ app = FastAPI(
 ALLOWED_EXPERIENCE_LEVELS = {"beginner", "intermediate", "advanced", "expert"}
 ALLOWED_ROLES = {"member", "leader", "instructor", "medic"}
 ALLOWED_REPORT_TYPES = {"final", "incident", "medical"}
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.include_router(ui.router)
 
 
 @app.get("/health")
