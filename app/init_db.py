@@ -1,4 +1,4 @@
-from app import models  # КРИТИЧЕСКИ ВАЖНО!
+from app import models
 from app.db import Base, engine
 
 
