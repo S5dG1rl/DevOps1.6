@@ -85,3 +85,4 @@ Version: v0.0.0
 5. Уровень опыта альпиниста: beginner, intermediate, advanced, expert
 6. Роль в группе: member, leader, instructor, medic
 7. Тип отчёта: final, incident, medical
+8. http://localhost:8000/?spm=a2ty_o01.29997173.0.0.784255fbUIuCti
