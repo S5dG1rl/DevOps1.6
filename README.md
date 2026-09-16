@@ -36,3 +36,52 @@ Version: v0.0.0
 В проекте отключены правила `B008` и `DTZ011`. Это сделано не для ослабления CI, а по следующим причинам:
 - `B008` (Depends в аргументах) конфликтует со стандартным и рекомендованным паттерном внедрения зависимостей в FastAPI.
 - `DTZ011` (date.today) отключено, так как в предметной области (даты восхождений) не требуются часовые пояса, используются простые даты.
+
+## API Endpoints
+
+| Метод | Путь | Назначение |
+|-------|------|------------|
+| GET | `/health` | Проверка работоспособности |
+| GET | `/api/mountains` | Список гор |
+| POST | `/api/mountains` | Создание горы |
+| GET | `/api/climbers` | Список альпинистов |
+| POST | `/api/climbers` | Создание альпиниста |
+| GET | `/api/groups` | Список групп |
+| POST | `/api/groups` | Создание группы |
+| POST | `/api/groups/{id}/climbers` | Добавить альпиниста в группу |
+| GET | `/api/ascents` | Список восхождений |
+| POST | `/api/ascents` | Создание восхождения |
+| POST | `/api/ascents/{id}/complete` | Завершить восхождение |
+| POST | `/api/ascents/{id}/cancel` | Отменить восхождение |
+| GET | `/api/reports` | Список отчётов |
+| POST | `/api/reports` | Создание отчёта |
+
+## Схема данных
+
+**Mountain** (Гора)
+- id, name (unique), country, region, height_m
+
+**Climber** (Альпинист)
+- id, full_name, email (unique), birth_date, experience_level, medical_clearance
+
+**Group** (Группа)
+- id, name (unique), description
+
+**GroupClimber** (Участие в группе) — связь M:N
+- group_id, climber_id, role
+
+**Ascent** (Восхождение)
+- id, mountain_id, group_id, route_name, status, start_date, end_date, notes
+
+**Report** (Отчёт)
+- id, ascent_id, report_type, title, summary
+
+## Бизнес-правила
+
+1. Высота горы должна быть больше 0
+2. Дата окончания восхождения не может быть раньше даты начала
+3. Нельзя завершить восхождение, если в группе нет участников
+4. Отчёт можно создать только для завершённого восхождения
+5. Уровень опыта альпиниста: beginner, intermediate, advanced, expert
+6. Роль в группе: member, leader, instructor, medic
+7. Тип отчёта: final, incident, medical

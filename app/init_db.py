@@ -1,3 +1,4 @@
+from app import models  # КРИТИЧЕСКИ ВАЖНО!
 from app.db import Base, engine
 
 
