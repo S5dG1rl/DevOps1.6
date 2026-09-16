@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Новая гора — Альпклуб{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Добавить гору</h2>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form class="auth" method="post" action="/mountains/new">
+    <label for="name">Название</label>
+    <input id="name" name="name" required>
+    <label for="country">Страна</label>
+    <input id="country" name="country" required>
+    <label for="region">Регион</label>
+    <input id="region" name="region">
+    <label for="height_m">Высота, м</label>
+    <input id="height_m" name="height_m" type="number" min="1" required>
+    <button class="btn" type="submit">Сохранить</button>
+  </form>
+</section>
+{% endblock %}

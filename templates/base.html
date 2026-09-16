@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Альпклуб{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="logo" href="/">Альпклуб</a>
+    <nav>
+      {% if user %}
+      <span class="user">Привет, {{ user.username }}</span>
+      <a class="btn btn-light" href="/mountains/new">Добавить гору</a>
+      <a class="btn btn-light" href="/logout">Выйти</a>
+      {% else %}
+      <a class="btn btn-light" href="/login">Вход</a>
+      <a class="btn" href="/register">Регистрация</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+  {% block content %}{% endblock %}
+</main>
+<footer class="wrap footer">Альпклуб, 2026</footer>
+</body>
+</html>
