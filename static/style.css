@@ -171,3 +171,7 @@ form.auth .btn {
     font-size: 13px;
     padding-bottom: 24px;
 }
+
+body {
+    background: url("/static/bg.jpg") center / cover fixed no-repeat;
+}
