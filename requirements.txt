@@ -3,5 +3,6 @@ uvicorn[standard]
 sqlalchemy
 pydantic
 python-dotenv
-jinja2
-python-multipart
+passlib[bcrypt]
+python-jose[cryptography]
+cryptography
