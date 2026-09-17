@@ -16,6 +16,21 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
 
 
+class User(Base):
+    """Пользователи системы (администраторы, инструкторы)"""
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    role: Mapped[str] = mapped_column(String(50), default="instructor")
+
+    def __repr__(self):
+        return f"<User {self.username}>"
+
+
 class Mountain(Base):
     __tablename__ = "mountains"
 
@@ -31,11 +46,18 @@ class Mountain(Base):
 
 
 class Climber(Base):
+    """Альпинисты с шифрованными ПДн"""
     __tablename__ = "climbers"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    full_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    email: Mapped[str | None] = mapped_column(String(200), unique=True, nullable=True)
+    
+    # Шифрованные поля (хранятся в БД как зашифрованные строки)
+    full_name_encrypted: Mapped[str] = mapped_column(String(500), nullable=False)
+    email_encrypted: Mapped[str | None] = mapped_column(String(500), unique=True, nullable=True)
+    
+    # Хэш email для поиска (детерминированное шифрование)
+    email_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    
     birth_date: Mapped[date] = mapped_column(Date, nullable=False)
     experience_level: Mapped[str] = mapped_column(String(20), nullable=False)
     medical_clearance: Mapped[bool] = mapped_column(
@@ -43,6 +65,9 @@ class Climber(Base):
     )
 
     memberships: Mapped[list[GroupClimber]] = relationship(back_populates="climber")
+
+    def __repr__(self):
+        return f"<Climber ID={self.id}>"
 
 
 class Group(Base):
@@ -113,24 +138,3 @@ class Report(Base):
     summary: Mapped[str] = mapped_column(Text, nullable=False)
 
     ascent: Mapped[Ascent] = relationship(back_populates="reports")
-
-
-class User(Base):
-    __tablename__ = "users"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    email: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
-
-
-class Session(Base):
-    __tablename__ = "sessions"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
