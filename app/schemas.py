@@ -1,7 +1,42 @@
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+
+# ============================================
+# Схемы для аутентификации
+# ============================================
+
+class UserCreate(BaseModel):
+    username: str = Field(min_length=3, max_length=100)
+    email: EmailStr
+    password: str = Field(min_length=8)
+    role: str = "instructor"
+
+
+class UserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    email: str
+    is_active: bool
+    role: str
+
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+# ============================================
+# Схемы для Mountain
+# ============================================
 
 class MountainCreate(BaseModel):
     name: str
@@ -20,6 +55,10 @@ class MountainRead(BaseModel):
     height_m: int
 
 
+# ============================================
+# Схемы для Climber (с автоматическим шифрованием)
+# ============================================
+
 class ClimberCreate(BaseModel):
     full_name: str
     email: str | None = None
@@ -29,6 +68,7 @@ class ClimberCreate(BaseModel):
 
 
 class ClimberRead(BaseModel):
+    """Схема для чтения - возвращает дешифрованные данные"""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -38,6 +78,10 @@ class ClimberRead(BaseModel):
     experience_level: str
     medical_clearance: bool
 
+
+# ============================================
+# Схемы для Group
+# ============================================
 
 class GroupCreate(BaseModel):
     name: str
@@ -65,6 +109,10 @@ class GroupClimberRead(BaseModel):
     role: str
 
 
+# ============================================
+# Схемы для Ascent
+# ============================================
+
 class AscentCreate(BaseModel):
     mountain_id: int
     group_id: int
@@ -86,6 +134,10 @@ class AscentRead(BaseModel):
     end_date: date
     notes: str | None
 
+
+# ============================================
+# Схемы для Report
+# ============================================
 
 class ReportCreate(BaseModel):
     ascent_id: int
