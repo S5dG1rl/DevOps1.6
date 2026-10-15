@@ -166,3 +166,22 @@ def test_list_ascents_requires_auth(client):
 def test_list_reports_requires_auth(client):
     response = client.get("/api/reports")
     assert response.status_code == 401
+
+
+def test_invalid_token_returns_401(client):
+    client.headers["Authorization"] = "Bearer invalid-token"
+    response = client.get("/api/climbers")
+    assert response.status_code == 401
+
+
+def test_invalid_token_cannot_create_mountain(client):
+    client.headers["Authorization"] = "Bearer invalid-token"
+    response = client.post(
+        "/api/mountains",
+        json={
+            "name": "Тестовая гора",
+            "altitude": 1000,
+            "country": "Россия",
+        },
+    )
+    assert response.status_code == 401
