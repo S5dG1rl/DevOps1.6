@@ -15,13 +15,15 @@ templates = Jinja2Templates(directory="templates")
 
 
 def get_ui_user(request: Request, db: DbSession) -> User | None:
-    """Получает пользователя из cookie-сессии для веб-интерфейса"""
+    """Получает пользователя из cookie-сессии для веб-интерфейса."""
     token = request.cookies.get("token")
     if not token:
         return None
+
     session = db.query(UserSession).filter(UserSession.token == token).first()
     if not session:
         return None
+
     return db.query(User).filter(User.id == session.user_id).first()
 
 
@@ -51,11 +53,15 @@ async def register(request: Request, db: DbSession = Depends(get_db)):
     username = form.get("username", "").strip()
     email = form.get("email", "").strip()
     password = form.get("password", "")
+
     error = None
+
     if not username or not email or len(password) < 6:
         error = "Заполните все поля, пароль должен быть не короче 6 символов"
     elif db.query(User).filter(User.username == username).first() is not None:
         error = "Такой логин уже занят"
+    elif db.query(User).filter(User.email == email).first() is not None:
+        error = "Такая почта уже зарегистрирована"
 
     if error is not None:
         return templates.TemplateResponse(
@@ -73,6 +79,7 @@ async def register(request: Request, db: DbSession = Depends(get_db)):
     )
     db.add(user)
     db.commit()
+
     return RedirectResponse("/login", status_code=303)
 
 
@@ -103,6 +110,7 @@ async def login(request: Request, db: DbSession = Depends(get_db)):
     token = secrets.token_hex(32)
     db.add(UserSession(user_id=user.id, token=token))
     db.commit()
+
     response = RedirectResponse("/", status_code=303)
     response.set_cookie("token", token)
     return response
@@ -114,6 +122,7 @@ def logout(request: Request, db: DbSession = Depends(get_db)):
     if token:
         db.query(UserSession).filter(UserSession.token == token).delete()
         db.commit()
+
     response = RedirectResponse("/", status_code=303)
     response.delete_cookie("token")
     return response
@@ -124,6 +133,7 @@ def mountain_form(request: Request, db: DbSession = Depends(get_db)):
     user = get_ui_user(request, db)
     if user is None:
         return RedirectResponse("/login", status_code=303)
+
     return templates.TemplateResponse(
         request,
         "mountain_form.html",
@@ -136,14 +146,17 @@ async def mountain_create(request: Request, db: DbSession = Depends(get_db)):
     user = get_ui_user(request, db)
     if user is None:
         return RedirectResponse("/login", status_code=303)
+
     form = await request.form()
     name = form.get("name", "").strip()
     country = form.get("country", "").strip()
     region = form.get("region", "").strip() or None
+
     try:
         height = int(form.get("height_m", "0"))
     except ValueError:
         height = 0
+
     if not name or not country or height <= 0:
         return templates.TemplateResponse(
             request,
@@ -154,7 +167,14 @@ async def mountain_create(request: Request, db: DbSession = Depends(get_db)):
             },
             status_code=400,
         )
-    mountain = Mountain(name=name, country=country, region=region, height_m=height)
+
+    mountain = Mountain(
+        name=name,
+        country=country,
+        region=region,
+        height_m=height,
+    )
     db.add(mountain)
     db.commit()
+
     return RedirectResponse("/", status_code=303)
