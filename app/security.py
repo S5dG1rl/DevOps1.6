@@ -23,7 +23,9 @@ if not ENCRYPTION_KEY:
 fernet = Fernet(ENCRYPTION_KEY.encode())
 
 # Настройки JWT
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "default-secret-key")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    raise ValueError("JWT_SECRET_KEY не установлен в переменных окружения!")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 

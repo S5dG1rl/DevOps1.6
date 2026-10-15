@@ -1,9 +1,11 @@
 services:
   app:
     build: .
+    env_file:
+      - .env
     environment:
       APP_ENV: production
-      APP_VERSION: 0.1.0
+      APP_VERSION: 0.2.0
       DATABASE_URL: sqlite:////app/data/alpine.db
     ports:
       - "8000:8000"
