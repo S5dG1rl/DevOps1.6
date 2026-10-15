@@ -204,7 +204,9 @@ def get_climber(
 
 
 @app.get("/api/groups", response_model=list[GroupRead])
-def list_groups(db: Session = Depends(get_db)):
+def list_groups(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+):
     return db.query(Group).all()
 
 
@@ -228,7 +230,11 @@ def create_group(
 
 
 @app.get("/api/groups/{group_id}", response_model=GroupRead)
-def get_group(group_id: int, db: Session = Depends(get_db)):
+def get_group(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     group = db.get(Group, group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -278,7 +284,11 @@ def add_climber_to_group(
 
 
 @app.get("/api/groups/{group_id}/climbers", response_model=list[GroupClimberRead])
-def list_group_climbers(group_id: int, db: Session = Depends(get_db)):
+def list_group_climbers(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     group = db.get(Group, group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -291,7 +301,9 @@ def list_group_climbers(group_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/api/ascents", response_model=list[AscentRead])
-def list_ascents(db: Session = Depends(get_db)):
+def list_ascents(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+):
     return db.query(Ascent).all()
 
 
@@ -319,7 +331,11 @@ def create_ascent(
 
 
 @app.get("/api/ascents/{ascent_id}", response_model=AscentRead)
-def get_ascent(ascent_id: int, db: Session = Depends(get_db)):
+def get_ascent(
+    ascent_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     ascent = db.get(Ascent, ascent_id)
     if not ascent:
         raise HTTPException(status_code=404, detail="Ascent not found")
@@ -382,7 +398,9 @@ def cancel_ascent(
 
 
 @app.get("/api/reports", response_model=list[ReportRead])
-def list_reports(db: Session = Depends(get_db)):
+def list_reports(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+):
     return db.query(Report).all()
 
 
@@ -411,7 +429,11 @@ def create_report(
 
 
 @app.get("/api/reports/{report_id}", response_model=ReportRead)
-def get_report(report_id: int, db: Session = Depends(get_db)):
+def get_report(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
@@ -419,7 +441,11 @@ def get_report(report_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/api/ascents/{ascent_id}/reports", response_model=list[ReportRead])
-def list_ascent_reports(ascent_id: int, db: Session = Depends(get_db)):
+def list_ascent_reports(
+    ascent_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     if not db.get(Ascent, ascent_id):
         raise HTTPException(status_code=404, detail="Ascent not found")
     return db.query(Report).filter(Report.ascent_id == ascent_id).all()

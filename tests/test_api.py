@@ -146,3 +146,23 @@ def test_full_flow(auth_client):
         },
     )
     assert response.status_code == 201
+
+
+def test_list_climbers_requires_auth(client):
+    response = client.get("/api/climbers")
+    assert response.status_code == 401
+
+
+def test_list_groups_requires_auth(client):
+    response = client.get("/api/groups")
+    assert response.status_code == 401
+
+
+def test_list_ascents_requires_auth(client):
+    response = client.get("/api/ascents")
+    assert response.status_code == 401
+
+
+def test_list_reports_requires_auth(client):
+    response = client.get("/api/reports")
+    assert response.status_code == 401
