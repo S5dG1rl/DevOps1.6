@@ -6,11 +6,13 @@ from datetime import date
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth import get_current_active_user, router as auth_router
+from app.auth import get_current_active_user
+from app.auth import router as auth_router
 from app.db import get_db
 from app.models import (
     Ascent,
@@ -36,6 +38,7 @@ from app.schemas import (
     ReportRead,
 )
 from app.security import decrypt_data, encrypt_data
+from app.ui import router as ui_router
 
 load_dotenv()
 
@@ -45,8 +48,14 @@ app = FastAPI(
     description="API для учёта альпинистов с шифрованием ПДн и JWT-аутентификацией",
 )
 
+# Подключаем раздачу статических файлов (CSS, картинки и т.д.)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # Подключаем роутер аутентификации
 app.include_router(auth_router)
+
+# Подключаем роутер пользовательского интерфейса (HTML-страницы)
+app.include_router(ui_router)
 
 ALLOWED_EXPERIENCE_LEVELS = {"beginner", "intermediate", "advanced", "expert"}
 ALLOWED_ROLES = {"member", "leader", "instructor", "medic"}
@@ -91,6 +100,7 @@ def health(db: Session = Depends(get_db)):
 # Mountains (не требуют аутентификации для чтения)
 # ============================================
 
+
 @app.get("/api/mountains", response_model=list[MountainRead])
 def list_mountains(db: Session = Depends(get_db)):
     return db.query(Mountain).all()
@@ -108,7 +118,9 @@ def create_mountain(
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Mountain with this name already exists")
+        raise HTTPException(
+            status_code=409, detail="Mountain with this name already exists"
+        )
     db.refresh(mountain)
     return mountain
 
@@ -124,6 +136,7 @@ def get_mountain(mountain_id: int, db: Session = Depends(get_db)):
 # ============================================
 # Climbers (с шифрованием ПДн)
 # ============================================
+
 
 @app.get("/api/climbers", response_model=list[ClimberRead])
 def list_climbers(
@@ -143,7 +156,9 @@ def create_climber(
     if payload.experience_level not in ALLOWED_EXPERIENCE_LEVELS:
         raise HTTPException(status_code=422, detail="Invalid experience_level")
     if payload.birth_date > date.today():
-        raise HTTPException(status_code=422, detail="birth_date cannot be in the future")
+        raise HTTPException(
+            status_code=422, detail="birth_date cannot be in the future"
+        )
 
     # Шифруем ПДн перед сохранением
     full_name_encrypted = encrypt_data(payload.full_name)
@@ -163,9 +178,11 @@ def create_climber(
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Climber with this email already exists")
+        raise HTTPException(
+            status_code=409, detail="Climber with this email already exists"
+        )
     db.refresh(climber)
-    
+
     return climber_to_read_schema(climber)
 
 
@@ -185,6 +202,7 @@ def get_climber(
 # Groups
 # ============================================
 
+
 @app.get("/api/groups", response_model=list[GroupRead])
 def list_groups(db: Session = Depends(get_db)):
     return db.query(Group).all()
@@ -202,7 +220,9 @@ def create_group(
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Group with this name already exists")
+        raise HTTPException(
+            status_code=409, detail="Group with this name already exists"
+        )
     db.refresh(group)
     return group
 
@@ -215,7 +235,9 @@ def get_group(group_id: int, db: Session = Depends(get_db)):
     return group
 
 
-@app.post("/api/groups/{group_id}/climbers", response_model=GroupClimberRead, status_code=201)
+@app.post(
+    "/api/groups/{group_id}/climbers", response_model=GroupClimberRead, status_code=201
+)
 def add_climber_to_group(
     group_id: int,
     payload: GroupClimberCreate,
@@ -267,6 +289,7 @@ def list_group_climbers(group_id: int, db: Session = Depends(get_db)):
 # Ascents
 # ============================================
 
+
 @app.get("/api/ascents", response_model=list[AscentRead])
 def list_ascents(db: Session = Depends(get_db)):
     return db.query(Ascent).all()
@@ -279,7 +302,9 @@ def create_ascent(
     current_user: User = Depends(get_current_active_user),
 ):
     if payload.end_date < payload.start_date:
-        raise HTTPException(status_code=422, detail="end_date cannot be earlier than start_date")
+        raise HTTPException(
+            status_code=422, detail="end_date cannot be earlier than start_date"
+        )
 
     if not db.get(Mountain, payload.mountain_id):
         raise HTTPException(status_code=404, detail="Mountain not found")
@@ -321,7 +346,9 @@ def complete_ascent(
     if ascent.status == "cancelled":
         raise HTTPException(status_code=409, detail="Cannot complete cancelled ascent")
     if len(ascent.group.memberships) == 0:
-        raise HTTPException(status_code=409, detail="Cannot complete ascent without group participants")
+        raise HTTPException(
+            status_code=409, detail="Cannot complete ascent without group participants"
+        )
 
     ascent.status = "completed"
     db.commit()
@@ -353,6 +380,7 @@ def cancel_ascent(
 # Reports
 # ============================================
 
+
 @app.get("/api/reports", response_model=list[ReportRead])
 def list_reports(db: Session = Depends(get_db)):
     return db.query(Report).all()
@@ -371,7 +399,9 @@ def create_report(
     if not ascent:
         raise HTTPException(status_code=404, detail="Ascent not found")
     if ascent.status != "completed":
-        raise HTTPException(status_code=409, detail="Report can be created only for completed ascent")
+        raise HTTPException(
+            status_code=409, detail="Report can be created only for completed ascent"
+        )
 
     report = Report(**payload.model_dump())
     db.add(report)

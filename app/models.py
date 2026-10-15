@@ -18,6 +18,7 @@ from app.db import Base
 
 class User(Base):
     """Пользователи системы (администраторы, инструкторы)"""
+
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -29,6 +30,20 @@ class User(Base):
 
     def __repr__(self):
         return f"<User {self.username}>"
+
+
+class Session(Base):
+    """Сессии пользователей для cookie-аутентификации в веб-интерфейсе"""
+
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+
+    user: Mapped[User] = relationship()
 
 
 class Mountain(Base):
@@ -47,17 +62,17 @@ class Mountain(Base):
 
 class Climber(Base):
     """Альпинисты с шифрованными ПДн"""
+
     __tablename__ = "climbers"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    
-    # Шифрованные поля (хранятся в БД как зашифрованные строки)
     full_name_encrypted: Mapped[str] = mapped_column(String(500), nullable=False)
-    email_encrypted: Mapped[str | None] = mapped_column(String(500), unique=True, nullable=True)
-    
-    # Хэш email для поиска (детерминированное шифрование)
-    email_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
-    
+    email_encrypted: Mapped[str | None] = mapped_column(
+        String(500), unique=True, nullable=True
+    )
+    email_hash: Mapped[str | None] = mapped_column(
+        String(64), unique=True, nullable=True
+    )
     birth_date: Mapped[date] = mapped_column(Date, nullable=False)
     experience_level: Mapped[str] = mapped_column(String(20), nullable=False)
     medical_clearance: Mapped[bool] = mapped_column(
@@ -85,12 +100,10 @@ class GroupClimber(Base):
     __tablename__ = "group_climbers"
 
     group_id: Mapped[int] = mapped_column(
-        ForeignKey("groups.id", ondelete="CASCADE"),
-        primary_key=True,
+        ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True
     )
     climber_id: Mapped[int] = mapped_column(
-        ForeignKey("climbers.id", ondelete="CASCADE"),
-        primary_key=True,
+        ForeignKey("climbers.id", ondelete="CASCADE"), primary_key=True
     )
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="member")
 
@@ -103,12 +116,10 @@ class Ascent(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     mountain_id: Mapped[int] = mapped_column(
-        ForeignKey("mountains.id", ondelete="RESTRICT"),
-        nullable=False,
+        ForeignKey("mountains.id", ondelete="RESTRICT"), nullable=False
     )
     group_id: Mapped[int] = mapped_column(
-        ForeignKey("groups.id", ondelete="RESTRICT"),
-        nullable=False,
+        ForeignKey("groups.id", ondelete="RESTRICT"), nullable=False
     )
     route_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="planned")
@@ -128,8 +139,7 @@ class Report(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     ascent_id: Mapped[int] = mapped_column(
-        ForeignKey("ascents.id", ondelete="RESTRICT"),
-        nullable=False,
+        ForeignKey("ascents.id", ondelete="RESTRICT"), nullable=False
     )
     report_type: Mapped[str] = mapped_column(
         String(20), nullable=False, default="final"

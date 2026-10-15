@@ -1,6 +1,7 @@
 """
 Модуль аутентификации: регистрация, логин, получение текущего пользователя
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -32,19 +33,19 @@ def get_current_user(
         detail="Не удалось проверить учётные данные",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
     payload = decode_access_token(token)
     if payload is None:
         raise credentials_exception
-    
+
     username: str = payload.get("sub")
     if username is None:
         raise credentials_exception
-    
+
     user = db.query(User).filter(User.username == username).first()
     if user is None:
         raise credentials_exception
-    
+
     return user
 
 
@@ -70,7 +71,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
             status_code=400,
             detail="Пользователь с таким username уже существует",
         )
-    
+
     # Проверяем, что email не занят
     existing_email = db.query(User).filter(User.email == user_data.email).first()
     if existing_email:
@@ -78,7 +79,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
             status_code=400,
             detail="Пользователь с таким email уже существует",
         )
-    
+
     # Создаём пользователя
     user = User(
         username=user_data.username,
@@ -90,7 +91,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    
+
     return user
 
 
@@ -98,22 +99,22 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
     """Вход в систему и получение JWT токена"""
     user = db.query(User).filter(User.username == credentials.username).first()
-    
+
     if not user or not verify_password(credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверный username или пароль",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Пользователь неактивен",
         )
-    
+
     access_token = create_access_token(data={"sub": user.username})
-    
+
     return {"access_token": access_token, "token_type": "bearer"}
 
 

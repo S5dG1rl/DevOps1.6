@@ -2,10 +2,10 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-
 # ============================================
 # Схемы для аутентификации
 # ============================================
+
 
 class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=100)
@@ -38,6 +38,7 @@ class Token(BaseModel):
 # Схемы для Mountain
 # ============================================
 
+
 class MountainCreate(BaseModel):
     name: str
     country: str
@@ -59,6 +60,7 @@ class MountainRead(BaseModel):
 # Схемы для Climber (с автоматическим шифрованием)
 # ============================================
 
+
 class ClimberCreate(BaseModel):
     full_name: str
     email: str | None = None
@@ -69,6 +71,7 @@ class ClimberCreate(BaseModel):
 
 class ClimberRead(BaseModel):
     """Схема для чтения - возвращает дешифрованные данные"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -82,6 +85,7 @@ class ClimberRead(BaseModel):
 # ============================================
 # Схемы для Group
 # ============================================
+
 
 class GroupCreate(BaseModel):
     name: str
@@ -113,6 +117,7 @@ class GroupClimberRead(BaseModel):
 # Схемы для Ascent
 # ============================================
 
+
 class AscentCreate(BaseModel):
     mountain_id: int
     group_id: int
@@ -138,6 +143,7 @@ class AscentRead(BaseModel):
 # ============================================
 # Схемы для Report
 # ============================================
+
 
 class ReportCreate(BaseModel):
     ascent_id: int

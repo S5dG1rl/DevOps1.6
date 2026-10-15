@@ -1,5 +1,5 @@
-def create_mountain(client, name="Эльбрус"):
-    response = client.post(
+def create_mountain(auth_client, name="Эльбрус"):
+    response = auth_client.post(
         "/api/mountains",
         json={
             "name": name,
@@ -12,8 +12,8 @@ def create_mountain(client, name="Эльбрус"):
     return response.json()
 
 
-def create_climber(client):
-    response = client.post(
+def create_climber(auth_client):
+    response = auth_client.post(
         "/api/climbers",
         json={
             "full_name": "Иванов Иван Иванович",
@@ -27,8 +27,8 @@ def create_climber(client):
     return response.json()
 
 
-def create_group(client, name="Группа 1"):
-    response = client.post(
+def create_group(auth_client, name="Группа 1"):
+    response = auth_client.post(
         "/api/groups",
         json={
             "name": name,
@@ -39,8 +39,8 @@ def create_group(client, name="Группа 1"):
     return response.json()
 
 
-def create_ascent(client, mountain_id, group_id):
-    response = client.post(
+def create_ascent(auth_client, mountain_id, group_id):
+    response = auth_client.post(
         "/api/ascents",
         json={
             "mountain_id": mountain_id,
@@ -64,14 +64,14 @@ def test_health(client):
     assert data["database"] == "ok"
 
 
-def test_create_mountain(client):
-    mountain = create_mountain(client)
+def test_create_mountain(auth_client):
+    mountain = create_mountain(auth_client)
     assert mountain["id"] == 1
     assert mountain["name"] == "Эльбрус"
 
 
-def test_create_mountain_invalid_height(client):
-    response = client.post(
+def test_create_mountain_invalid_height(auth_client):
+    response = auth_client.post(
         "/api/mountains",
         json={
             "name": "Некорректная гора",
@@ -82,11 +82,11 @@ def test_create_mountain_invalid_height(client):
     assert response.status_code == 422
 
 
-def test_ascent_invalid_dates(client):
-    mountain = create_mountain(client)
-    group = create_group(client)
+def test_ascent_invalid_dates(auth_client):
+    mountain = create_mountain(auth_client)
+    group = create_group(auth_client)
 
-    response = client.post(
+    response = auth_client.post(
         "/api/ascents",
         json={
             "mountain_id": mountain["id"],
@@ -98,21 +98,21 @@ def test_ascent_invalid_dates(client):
     assert response.status_code == 422
 
 
-def test_complete_ascent_without_participants(client):
-    mountain = create_mountain(client)
-    group = create_group(client)
-    ascent = create_ascent(client, mountain["id"], group["id"])
+def test_complete_ascent_without_participants(auth_client):
+    mountain = create_mountain(auth_client)
+    group = create_group(auth_client)
+    ascent = create_ascent(auth_client, mountain["id"], group["id"])
 
-    response = client.post(f"/api/ascents/{ascent['id']}/complete")
+    response = auth_client.post(f"/api/ascents/{ascent['id']}/complete")
     assert response.status_code == 409
 
 
-def test_full_flow(client):
-    mountain = create_mountain(client)
-    climber = create_climber(client)
-    group = create_group(client)
+def test_full_flow(auth_client):
+    mountain = create_mountain(auth_client)
+    climber = create_climber(auth_client)
+    group = create_group(auth_client)
 
-    response = client.post(
+    response = auth_client.post(
         f"/api/groups/{group['id']}/climbers",
         json={
             "climber_id": climber["id"],
@@ -121,9 +121,9 @@ def test_full_flow(client):
     )
     assert response.status_code == 201
 
-    ascent = create_ascent(client, mountain["id"], group["id"])
+    ascent = create_ascent(auth_client, mountain["id"], group["id"])
 
-    response = client.post(
+    response = auth_client.post(
         "/api/reports",
         json={
             "ascent_id": ascent["id"],
@@ -133,11 +133,11 @@ def test_full_flow(client):
     )
     assert response.status_code == 409
 
-    response = client.post(f"/api/ascents/{ascent['id']}/complete")
+    response = auth_client.post(f"/api/ascents/{ascent['id']}/complete")
     assert response.status_code == 200
     assert response.json()["status"] == "completed"
 
-    response = client.post(
+    response = auth_client.post(
         "/api/reports",
         json={
             "ascent_id": ascent["id"],

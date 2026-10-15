@@ -1,10 +1,11 @@
 """
 Модуль безопасности: шифрование ПДн и JWT-аутентификация
 """
+
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from cryptography.fernet import Fernet
@@ -24,7 +25,7 @@ fernet = Fernet(ENCRYPTION_KEY.encode())
 # Настройки JWT
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "default-secret-key")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 1440))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
 
 def encrypt_data(data: str | None) -> str | None:
@@ -55,9 +56,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     """Создаёт JWT токен"""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
     return encoded_jwt

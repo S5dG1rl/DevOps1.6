@@ -5,17 +5,29 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session as DbSession
 
-from app.auth import check_password, get_current_user, hash_password
 from app.db import get_db
-from app.models import Mountain, Session, User
+from app.models import Mountain, User
+from app.models import Session as UserSession
+from app.security import hash_password, verify_password
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 
+def get_ui_user(request: Request, db: DbSession) -> User | None:
+    """Получает пользователя из cookie-сессии для веб-интерфейса"""
+    token = request.cookies.get("token")
+    if not token:
+        return None
+    session = db.query(UserSession).filter(UserSession.token == token).first()
+    if not session:
+        return None
+    return db.query(User).filter(User.id == session.user_id).first()
+
+
 @router.get("/", response_class=HTMLResponse)
 def index(request: Request, db: DbSession = Depends(get_db)):
-    user = get_current_user(request, db)
+    user = get_ui_user(request, db)
     mountains = db.query(Mountain).all()
     return templates.TemplateResponse(
         request,
@@ -44,6 +56,7 @@ async def register(request: Request, db: DbSession = Depends(get_db)):
         error = "Заполните все поля, пароль должен быть не короче 6 символов"
     elif db.query(User).filter(User.username == username).first() is not None:
         error = "Такой логин уже занят"
+
     if error is not None:
         return templates.TemplateResponse(
             request,
@@ -51,7 +64,13 @@ async def register(request: Request, db: DbSession = Depends(get_db)):
             {"error": error},
             status_code=400,
         )
-    user = User(username=username, email=email, password_hash=hash_password(password))
+
+    user = User(
+        username=username,
+        email=email,
+        hashed_password=hash_password(password),
+        is_active=True,
+    )
     db.add(user)
     db.commit()
     return RedirectResponse("/login", status_code=303)
@@ -72,15 +91,17 @@ async def login(request: Request, db: DbSession = Depends(get_db)):
     username = form.get("username", "").strip()
     password = form.get("password", "")
     user = db.query(User).filter(User.username == username).first()
-    if user is None or not check_password(password, user.password_hash):
+
+    if user is None or not verify_password(password, user.hashed_password):
         return templates.TemplateResponse(
             request,
             "login.html",
             {"error": "Неверный логин или пароль"},
             status_code=400,
         )
+
     token = secrets.token_hex(32)
-    db.add(Session(user_id=user.id, token=token))
+    db.add(UserSession(user_id=user.id, token=token))
     db.commit()
     response = RedirectResponse("/", status_code=303)
     response.set_cookie("token", token)
@@ -91,7 +112,7 @@ async def login(request: Request, db: DbSession = Depends(get_db)):
 def logout(request: Request, db: DbSession = Depends(get_db)):
     token = request.cookies.get("token")
     if token:
-        db.query(Session).filter(Session.token == token).delete()
+        db.query(UserSession).filter(UserSession.token == token).delete()
         db.commit()
     response = RedirectResponse("/", status_code=303)
     response.delete_cookie("token")
@@ -100,7 +121,7 @@ def logout(request: Request, db: DbSession = Depends(get_db)):
 
 @router.get("/mountains/new", response_class=HTMLResponse)
 def mountain_form(request: Request, db: DbSession = Depends(get_db)):
-    user = get_current_user(request, db)
+    user = get_ui_user(request, db)
     if user is None:
         return RedirectResponse("/login", status_code=303)
     return templates.TemplateResponse(
@@ -112,7 +133,7 @@ def mountain_form(request: Request, db: DbSession = Depends(get_db)):
 
 @router.post("/mountains/new")
 async def mountain_create(request: Request, db: DbSession = Depends(get_db)):
-    user = get_current_user(request, db)
+    user = get_ui_user(request, db)
     if user is None:
         return RedirectResponse("/login", status_code=303)
     form = await request.form()
