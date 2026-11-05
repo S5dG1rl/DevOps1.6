@@ -115,7 +115,7 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": user.username})
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer"}  # nosec B105 - OAuth2 token type constant, not a secret
 
 
 @router.get("/me", response_model=UserRead)

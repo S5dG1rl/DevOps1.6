@@ -54,6 +54,7 @@ class Mountain(Base):
     country: Mapped[str] = mapped_column(String(100), nullable=False)
     region: Mapped[str | None] = mapped_column(String(100), nullable=True)
     height_m: Mapped[int] = mapped_column(Integer, nullable=False)
+    difficulty: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     ascents: Mapped[list[Ascent]] = relationship(back_populates="mountain")
 

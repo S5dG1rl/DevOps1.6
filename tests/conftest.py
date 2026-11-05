@@ -4,6 +4,7 @@ os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from app.db import Base, engine
 from app.main import app
@@ -23,6 +24,13 @@ def client():
 
 
 @pytest.fixture()
+def db_session():
+    db = Session(bind=engine)
+    yield db
+    db.close()
+
+
+@pytest.fixture()
 def auth_client(client):
     response = client.post(
         "/auth/register",
@@ -33,16 +41,11 @@ def auth_client(client):
         },
     )
     assert response.status_code == 201, response.text
-
     response = client.post(
         "/auth/login",
-        json={
-            "username": "test_instructor",
-            "password": "TestPassword123",
-        },
+        json={"username": "test_instructor", "password": "TestPassword123"},
     )
     assert response.status_code == 200, response.text
-
     token = response.json()["access_token"]
     client.headers.update({"Authorization": f"Bearer {token}"})
     return client

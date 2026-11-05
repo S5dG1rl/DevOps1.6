@@ -1,71 +1,81 @@
-PYTHON ?= py
-VENV_WIN := .venv/Scripts/python.exe
-VENV_UNIX := .venv/bin/python
-PY :=
 
-ifneq ($(wildcard $(VENV_WIN)),)
-PY := $(VENV_WIN)
-endif
+PYTHON ?= python3
 
-ifeq ($(PY),)
-ifneq ($(wildcard $(VENV_UNIX)),)
-PY := $(VENV_UNIX)
-endif
-endif
+VENV := venv/bin/python
 
-ifeq ($(PY),)
-PY := py
-endif
+PY := $(VENV)
 
 HOST ?= 0.0.0.0
-PORT ?= 8000
-BACKUP_DIR := backups
-TS := $(shell date +%Y%m%d_%H%M%S)
 
-.PHONY: setup run test quality format migrate backup restore verify up down container-check
+PORT ?= 8000
+
+
+
+.PHONY: setup run test quality format migrate backup restore verify
+
+
 
 setup:
-	$(PYTHON) -m venv .venv
-	if [ -f .venv/Scripts/python.exe ]; then ./.venv/Scripts/python -m pip install --upgrade pip; else ./.venv/bin/python -m pip install --upgrade pip; fi
-	if [ -f .venv/Scripts/python.exe ]; then ./.venv/Scripts/python -m pip install -r requirements-dev.txt; else ./.venv/bin/python -m pip install -r requirements-dev.txt; fi
+
+	$(PYTHON) -m venv venv
+
+	$(PY) -m pip install --upgrade pip
+
+	$(PY) -m pip install -r requirements.txt
+
 	@test -f .env || cp .env.example .env
-	@mkdir -p data
+
+
 
 run:
+
 	$(PY) -m uvicorn app.main:app --reload --host $(HOST) --port $(PORT)
 
+
+
 test:
-	$(PY) -m pytest -q
+
+	$(PY) -m pytest
+
+
 
 quality:
+
 	$(PY) -m ruff check .
+
 	$(PY) -m ruff format --check .
 
+	$(PY) -m bandit -r app/ -q
+
+
+
 format:
+
 	$(PY) -m ruff format .
 
+
+
 migrate:
-	$(PY) -m app.init_db
+
+	$(PY) -m alembic upgrade head
+
+
 
 backup:
-	@mkdir -p $(BACKUP_DIR)
-	@test -f data/alpine.db || (echo "No database file. Run make migrate first." && exit 1)
-	cp data/alpine.db $(BACKUP_DIR)/alpine_$(TS).db
-	@echo "Backup saved to $(BACKUP_DIR)/alpine_$(TS).db"
+
+	$(PY) scripts/backup.py
+
+
 
 restore:
-	@test -n "$(FILE)" || (echo "Usage: make restore FILE=backups/alpine_YYYY.db" && exit 1)
-	@test -f "$(FILE)" || (echo "Backup file not found: $(FILE)" && exit 1)
-	cp $(FILE) data/alpine.db
+
+	@test -n "$(FILE)" || (echo "Usage: make restore FILE=backups/backup_XXX.sql" && exit 1)
+
+	$(PY) scripts/restore.py $(FILE)
+
+
 
 verify: quality test
+
 	@echo "All local checks passed."
 
-up:
-	docker compose up -d --build
-
-down:
-	docker compose down
-
-container-check:
-	docker compose run --rm app sh -c "python -m ruff check . && python -m ruff format --check . && python -m pytest -q"
