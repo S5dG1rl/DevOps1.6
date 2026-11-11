@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .env
+.env.test
 data/
 backups/
 .pytest_cache/
@@ -9,4 +10,7 @@ backups/
 .idea/
 .vscode/
 *.db
-
+.coverage
+htmlcov/
+reports/*
+!reports/.gitkeep
