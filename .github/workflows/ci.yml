@@ -41,7 +41,17 @@ jobs:
         run: python -m bandit -r app/ -q
 
       - name: Tests (pytest)
-        run: make test PY=python3
+        run: |
+          set -o pipefail
+          make test PY=python3 2>&1 | tee pytest.log
+
+      - name: Report failure details
+        if: failure()
+        run: |
+          if [ -f pytest.log ]; then
+            msg=$(tail -n 40 pytest.log | tr '\n' '|' | cut -c1-1800 | sed 's/%/%25/g; s/::/:/g')
+            echo "::error title=pytest failure::$msg"
+          fi
 
       - name: Upload test and coverage reports
         if: always()
