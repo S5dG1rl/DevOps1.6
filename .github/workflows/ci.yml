@@ -24,8 +24,24 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Run verification
-        run: make verify PY=python3
+      - name: Environment info
+        run: |
+          python --version
+          python -m ruff --version
+          python -m bandit --version
+          python -m pytest --version
+
+      - name: Lint (ruff check)
+        run: python -m ruff check .
+
+      - name: Formatting (ruff format --check)
+        run: python -m ruff format --check .
+
+      - name: Security analysis (bandit)
+        run: python -m bandit -r app/ -q
+
+      - name: Tests (pytest)
+        run: make test PY=python3
 
       - name: Upload test and coverage reports
         if: always()
