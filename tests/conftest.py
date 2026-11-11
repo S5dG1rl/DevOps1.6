@@ -1,6 +1,13 @@
 import os
 
+# Тесты должны запускаться без .env и без реальных секретов:
+# задаём тестовые значения до импорта приложения.
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+os.environ.setdefault(
+    "ENCRYPTION_KEY",
+    "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
+)
+os.environ.setdefault("JWT_SECRET_KEY", "test-jwt-secret-key-not-for-production")
 
 import pytest
 from fastapi.testclient import TestClient
