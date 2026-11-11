@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 from datetime import date
 
@@ -14,6 +15,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.auth import get_current_active_user
 from app.auth import router as auth_router
 from app.db import get_db
+from app.logging_config import configure_logging
 from app.models import (
     Ascent,
     Climber,
@@ -41,12 +43,36 @@ from app.security import decrypt_data, encrypt_data
 from app.ui import router as ui_router
 
 load_dotenv()
+configure_logging()
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Alpine Club API",
     version=os.getenv("APP_VERSION", "0.2.0"),
     description="API для учёта альпинистов с шифрованием ПДн и JWT-аутентификацией",
 )
+
+
+@app.middleware("http")
+async def log_errors(request, call_next):
+    """Логирует необработанные исключения и ответы с кодом 5xx."""
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception(
+            "Необработанная ошибка: %s %s", request.method, request.url.path
+        )
+        raise
+    if response.status_code >= 500:
+        logger.error(
+            "Ответ %s на %s %s",
+            response.status_code,
+            request.method,
+            request.url.path,
+        )
+    return response
+
 
 # Подключаем раздачу статических файлов (CSS, картинки и т.д.)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -84,6 +110,7 @@ def health(db: Session = Depends(get_db)):
     try:
         db.execute(text("SELECT 1"))
     except Exception as exc:
+        logger.exception("Проверка доступности БД не удалась")
         raise HTTPException(
             status_code=503,
             detail={"status": "error", "database": "unavailable"},
