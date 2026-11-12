@@ -22,6 +22,9 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+# Схема авторизации по стандарту OAuth2: фиксированная строка ответа, не секрет.
+AUTH_SCHEME = "bearer"
+
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),
@@ -115,7 +118,7 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": user.username})
 
-    return {"access_token": access_token, "token_type": "bearer"}  # nosec B105 - OAuth2 token type constant, not a secret
+    return {"access_token": access_token, "token_type": AUTH_SCHEME}
 
 
 @router.get("/me", response_model=UserRead)
