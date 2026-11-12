@@ -1,14 +1,84 @@
+# Контейнерное окружение проекта DevOps1.6.
+#
+# Требования лабораторной работы №4:
+#  - образ приложения без тега latest, приложение работает не от root;
+#  - настройки передаются переменными окружения;
+#  - отдельная внутренняя сеть, том для данных БД, healthcheck и порядок запуска;
+#  - порт БД наружу не публикуется;
+#  - контейнеры имеют ограничения по CPU и памяти.
+
+name: devops16
+
 services:
+  db:
+    image: postgres:17@sha256:ff87138949ad9a46f32ff23bd6852b52ce024a13dffe9b4087be98292cdd3b4f
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mountains_db}
+      POSTGRES_USER: ${POSTGRES_USER:-app_db_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Не задан DB_PASSWORD в .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    # Порт наружу НЕ публикуется: БД доступна только внутри сети backend.
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app_db_user} -d ${POSTGRES_DB:-mountains_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
   app:
-    build: .
+    build:
+      context: .
+      target: runtime
+    image: devops16-app
     env_file:
       - .env
     environment:
       APP_ENV: production
       APP_VERSION: 0.2.0
-      DATABASE_URL: sqlite:////app/data/alpine.db
+      LOG_LEVEL: INFO
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app_db_user}:${DB_PASSWORD}@db:5432/${POSTGRES_DB:-mountains_db}
+    # Наружу открыт только порт приложения, и только на localhost:
+    # на хосте уже работает служба из лабы 2 на 8000, поэтому здесь 8001.
     ports:
-      - "${APP_PORT:-8000}:8000"
-    volumes:
-      - ./data:/app/data
-    command: sh -c "python -m app.init_db && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+      - "127.0.0.1:8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+      - edge
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).status == 200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 15s
+    # Время на корректное завершение по SIGTERM.
+    stop_grace_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+networks:
+  # Внутренняя сеть: у контейнеров нет выхода наружу.
+  backend:
+    internal: true
+  # Сеть для публикации порта приложения.
+  edge:
+
+volumes:
+  pgdata:

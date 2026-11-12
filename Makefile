@@ -10,7 +10,7 @@ PORT ?= 8000
 
 REPORTS := reports
 
-COMPOSE ?= docker compose
+COMPOSE ?= docker-compose
 
 .DEFAULT_GOAL := help
 
@@ -55,17 +55,32 @@ restore: ## Восстановить БД: make restore FILE=backups/backup_XXX.
 verify: quality test ## Полный обязательный набор проверок
 	@echo "All local checks passed."
 
-up: ## Запустить контейнерное окружение (нужен Docker)
-	@command -v docker >/dev/null 2>&1 || (echo "Docker не установлен. Установите docker.io и docker-compose-plugin." && exit 1)
+up: ## Запустить контейнерное окружение
+	@command -v $(firstword $(COMPOSE)) >/dev/null 2>&1 || (echo "Docker не установлен. Нужны docker.io и docker-compose." && exit 1)
 	$(COMPOSE) up -d --build
 
 down: ## Остановить контейнерное окружение
-	@command -v docker >/dev/null 2>&1 || (echo "Docker не установлен." && exit 1)
 	$(COMPOSE) down
 
-container-check: ## Прогнать проверки внутри контейнера
+container-check: ## Полная автоматическая проверка контейнерного окружения
 	@command -v docker >/dev/null 2>&1 || (echo "Docker не установлен." && exit 1)
-	$(COMPOSE) run --rm app sh -c "ruff check . && ruff format --check . && bandit -r app/ -q && pytest"
+	bash scripts/container_check.sh
+
+container-migrate: ## Применить миграции в контейнере
+	$(COMPOSE) run --rm app alembic upgrade head
+
+container-backup: ## Резервная копия БД из контейнера в backups/
+	@mkdir -p backups
+	$(COMPOSE) exec -T db sh -c 'pg_dump -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -F p' > backups/container_backup_$$(date +%Y%m%d_%H%M%S).sql
+	@ls -1t backups/container_backup_*.sql | head -1
+
+container-restore: ## Восстановить БД в контейнере: make container-restore FILE=backups/...sql
+	@test -n "$(FILE)" || (echo "Usage: make container-restore FILE=backups/container_backup_XXX.sql" && exit 1)
+	$(COMPOSE) exec -T db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"'
+	$(COMPOSE) exec -T db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"' < $(FILE)
+
+container-reset: ## Удалить контейнеры и volume БД (данные теряются)
+	$(COMPOSE) down -v
 
 reports: ## Создать каталог reports/
 	@mkdir -p $(REPORTS)
