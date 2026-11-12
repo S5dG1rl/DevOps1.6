@@ -31,14 +31,10 @@ jobs:
           python -m bandit --version
           python -m pytest --version
 
-      - name: Lint (ruff check)
-        run: python -m ruff check .
-
-      - name: Formatting (ruff format --check)
-        run: python -m ruff format --check .
-
-      - name: Security analysis (bandit)
-        run: python -m bandit -r app/ -q
+      - name: Quality (ruff + bandit)
+        run: |
+          set -o pipefail
+          make quality PY=python3 2>&1 | tee quality.log
 
       - name: Tests (pytest)
         run: |
@@ -48,12 +44,14 @@ jobs:
       - name: Report failure details
         if: failure()
         run: |
-          if [ -f pytest.log ]; then
-            msg=$(tail -n 40 pytest.log | tr '\n' '|' | cut -c1-1800 | sed 's/%/%25/g; s/::/:/g')
-            echo "::error title=pytest failure::$msg"
-          fi
+          for f in quality.log pytest.log; do
+            if [ -f "$f" ]; then
+              msg=$(tail -n 30 "$f" | tr '\n' '|' | cut -c1-1500 | sed 's/%/%25/g; s/::/:/g')
+              echo "::error title=CI failure ($f)::$msg"
+            fi
+          done
 
-      - name: Upload test and coverage reports
+      - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:

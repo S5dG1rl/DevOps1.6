@@ -51,7 +51,14 @@ sudo journalctl -u devops-app -f
 
 ## Отчёты проверок
 
-`make test` создаёт в `reports/`:
+`make quality` создаёт в `reports/`:
+
+- `ruff.txt` — замечания линтера;
+- `ruff-format.txt` — замечания по форматированию;
+- `bandit.txt` — отчёт SAST в текстовом виде;
+- `bandit.json` — тот же отчёт в машинночитаемом виде.
+
+`make test` создаёт там же:
 
 - `junit.xml` — результаты тестов;
 - `coverage.xml` — покрытие в формате Cobertura;
