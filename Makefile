@@ -27,10 +27,8 @@ run:
 test: reports
 	$(PY) -m pytest
 
-quality:
-	$(PY) -m ruff check .
-	$(PY) -m ruff format --check .
-	$(PY) -m bandit -r app/ -q
+quality: reports
+	PY=$(PY) bash scripts/quality.sh
 
 format:
 	$(PY) -m ruff format .
