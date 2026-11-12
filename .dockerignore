@@ -1,11 +1,37 @@
-.git
-.venv
+# Секреты и локальная конфигурация не должны попадать в образ
 .env
+.env.*
+!.env.example
+
+# Git и CI
+.git
+.gitignore
+.github
+
+# Локальные данные, бэкапы и отчёты
 data
 backups
+reports
+*.db
+.coverage
+htmlcov
+
+# Кэши
 __pycache__
 *.pyc
 .pytest_cache
 .ruff_cache
+
+# Виртуальные окружения
+.venv
+venv
+
+# Редакторы
 .idea
 .vscode
+
+# Сам Docker-контекст и документация
+Dockerfile
+docker-compose.yml
+.dockerignore
+README.md
