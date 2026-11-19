@@ -6,9 +6,9 @@
 #  - зависимости ставятся отдельным слоем до копирования кода.
 #
 # Стадии:
-#   base    — общие шаги установки зависимостей
-#   runtime — рабочий образ приложения (непривилегированный пользователь)
-#   test    — образ с инструментами проверки для make container-check
+#   base    — рабочие зависимости приложения
+#   test    — инструменты проверки + тесты; если проверки упали, сборка встаёт
+#   runtime — рабочий образ; код берётся из уже проверенной стадии test
 
 FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90 AS base
 
@@ -19,23 +19,45 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Только рабочие зависимости: инструменты проверок сюда не попадают.
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 
+# ---------- стадия проверки ----------
+# Тесты и статический анализ выполняются при сборке. Если что-то упало —
+# стадия не собирается, и рабочий образ получить нельзя.
+FROM base AS test
+
+COPY requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+COPY . .
+
+RUN mkdir -p reports \
+    && pytest -q \
+    && ruff check . \
+    && ruff format --check . \
+    && bandit -r app/ -q
+
+CMD ["pytest"]
+
+
 # ---------- рабочий образ ----------
+# Код копируется из стадии test, поэтому образ соберётся только после
+# успешных проверок. Инструменты проверок в этот образ не переходят.
 FROM base AS runtime
 
 # Отдельный непривилегированный пользователь: приложение не работает от root.
 RUN groupadd --system --gid 1001 app \
     && useradd --system --uid 1001 --gid app --home-dir /app --shell /usr/sbin/nologin app
 
-COPY --chown=app:app app ./app
-COPY --chown=app:app static ./static
-COPY --chown=app:app templates ./templates
-COPY --chown=app:app scripts ./scripts
-COPY --chown=app:app alembic ./alembic
-COPY --chown=app:app alembic.ini ./
+COPY --from=test --chown=app:app /app/app ./app
+COPY --from=test --chown=app:app /app/static ./static
+COPY --from=test --chown=app:app /app/templates ./templates
+COPY --from=test --chown=app:app /app/scripts ./scripts
+COPY --from=test --chown=app:app /app/alembic ./alembic
+COPY --from=test --chown=app:app /app/alembic.ini ./
 
 USER app
 
@@ -49,14 +71,3 @@ STOPSIGNAL SIGTERM
 
 # exec-форма: uvicorn становится PID 1 и первым получает сигнал остановки.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*", "--timeout-graceful-shutdown", "5"]
-
-
-# ---------- образ для проверок ----------
-FROM base AS test
-
-COPY requirements-dev.txt ./
-RUN pip install --no-cache-dir -r requirements-dev.txt
-
-COPY . .
-
-CMD ["pytest"]
