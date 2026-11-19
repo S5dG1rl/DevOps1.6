@@ -27,7 +27,7 @@ help: ## Показать этот список команд
 setup: ## Создать venv, поставить зависимости, скопировать .env
 	$(PYTHON) -m venv venv
 	$(PY) -m pip install --upgrade pip
-	$(PY) -m pip install -r requirements.txt
+	$(PY) -m pip install -r requirements-dev.txt
 	@test -f .env || cp .env.example .env
 
 run: ## Запустить приложение локально с автоперезагрузкой
