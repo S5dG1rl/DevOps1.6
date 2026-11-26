@@ -143,6 +143,13 @@ else
 fi
 
 step "7. Сохранность данных"
+# На чистом томе схемы ещё нет — применяем миграции, как при реальном развёртывании.
+if $COMPOSE run --rm app alembic upgrade head >/dev/null 2>&1; then
+    ok "миграции применены"
+else
+    bad "не удалось применить миграции"
+fi
+
 $COMPOSE exec -T db psql -U app_db_user -d mountains_db -c \
     "INSERT INTO mountains (name, country, height_m) VALUES ('PERSIST_TEST', 'RU', 1000) ON CONFLICT (name) DO NOTHING;" >/dev/null 2>&1
 $COMPOSE down >/dev/null 2>&1
