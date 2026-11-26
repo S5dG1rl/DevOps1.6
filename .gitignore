@@ -1,4 +1,4 @@
-.venv/
+﻿.venv/
 __pycache__/
 *.pyc
 .env
@@ -14,3 +14,4 @@ backups/
 htmlcov/
 reports/*
 !reports/.gitkeep
+artifacts/
