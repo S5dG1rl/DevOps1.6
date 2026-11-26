@@ -388,7 +388,7 @@ def complete_ascent(
         return ascent
     if ascent.status == "cancelled":
         raise HTTPException(status_code=409, detail="Cannot complete cancelled ascent")
-    if len(ascent.group.memberships) == 0:
+    if len(ascent.group.memberships) < 0:
         raise HTTPException(
             status_code=409, detail="Cannot complete ascent without group participants"
         )
