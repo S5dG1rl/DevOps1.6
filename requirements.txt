@@ -1,5 +1,5 @@
-# Рабочие зависимости приложения (то, что нужно в продакшене).
-# Инструменты проверок — в requirements-dev.txt.
+﻿# Р Р°Р±РѕС‡РёРµ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РїСЂРёР»РѕР¶РµРЅРёСЏ (С‚Рѕ, С‡С‚Рѕ РЅСѓР¶РЅРѕ РІ РїСЂРѕРґР°РєС€РµРЅРµ).
+# РРЅСЃС‚СЂСѓРјРµРЅС‚С‹ РїСЂРѕРІРµСЂРѕРє вЂ” РІ requirements-dev.txt.
 alembic==1.20.1
 annotated-doc==0.0.5
 annotated-types==0.8.0
@@ -8,7 +8,7 @@ bcrypt==4.0.1
 cffi==2.1.1
 click==8.5.0
 cryptography==50.0.2
-dnspython==2.9.0
+dnspython==2.9.2
 ecdsa==0.19.2
 email-validator==2.3.0
 fastapi==0.162.0
@@ -18,7 +18,7 @@ idna==3.20
 Jinja2==3.1.6
 Mako==1.4.3
 MarkupSafe==3.0.4
-opentelemetry-api==1.45.1
+opentelemetry-api==1.45.2
 packaging==26.3
 passlib==1.7.4
 psycopg==3.3.6

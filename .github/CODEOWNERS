@@ -1,0 +1,12 @@
+# Критические файлы приёмки: изменения требуют согласования владельца.
+# Ветка main защищена, слияние без одобрения CODEOWNERS невозможно.
+
+/tests/                 @S5dG1rl
+/pytest.ini             @S5dG1rl
+/ruff.toml              @S5dG1rl
+/Makefile               @S5dG1rl
+/.github/               @S5dG1rl
+/ci/                    @S5dG1rl
+/scripts/ci_guards.sh   @S5dG1rl
+/scripts/ci_tests.sh    @S5dG1rl
+/scripts/container_check.sh @S5dG1rl

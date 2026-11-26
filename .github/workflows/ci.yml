@@ -5,56 +5,116 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  # Все docker-команды идут в контейнер DinD, а не в демон раннера.
+  DOCKER_HOST: tcp://dind:2375
+  COMPOSE: docker compose
+  SHA_TAG: ${{ github.sha }}
 
 jobs:
   verify:
     runs-on: ubuntu-latest
 
+    services:
+      dind:
+        image: docker:27-dind
+        options: --privileged
+        env:
+          DOCKER_TLS_CERTDIR: ""
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
+      - name: Проверка DinD
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt -r requirements-dev.txt
+          docker info --format 'сервер DinD: {{.ServerVersion}}'
+          echo "DOCKER_HOST=$DOCKER_HOST"
 
-      - name: Environment info
+      - name: Кэш сборки
+        uses: docker/setup-buildx-action@v3
+
+      # ---------- защита критических файлов ----------
+      - name: Защита критических файлов
+        run: bash scripts/ci_guards.sh
+
+      # ---------- стиль и статический анализ ----------
+      - name: Стиль, форматирование, SAST, Dockerfile
         run: |
-          python --version
-          python -m ruff --version
-          python -m bandit --version
-          python -m pytest --version
+          docker buildx build --target test --load \
+            --cache-from type=gha --cache-to type=gha,mode=max \
+            -t devops16-test .
+          docker run --rm devops16-test sh -c 'ruff check . && ruff format --check . && bandit -r app/ -q'
+          docker run --rm -i hadolint/hadolint < Dockerfile
 
-      - name: Quality (ruff + bandit)
+      # ---------- безопасность ----------
+      - name: Поиск секретов (gitleaks)
         run: |
-          set -o pipefail
-          make quality PY=python3 2>&1 | tee quality.log
+          docker build -f ci/secret-scan.Dockerfile -t secret-scan .
 
-      - name: Tests (pytest)
+      - name: Проверка зависимостей (pip-audit)
         run: |
-          set -o pipefail
-          make test PY=python3 2>&1 | tee pytest.log
+          docker build -f ci/deps-audit.Dockerfile -t deps-audit .
 
-      - name: Report failure details
-        if: failure()
+      # ---------- тесты на отдельной БД ----------
+      - name: Тесты (отдельная тестовая БД)
+        run: bash scripts/ci_tests.sh
+
+      # ---------- миграции ----------
+      - name: Миграции на чистой БД
+        run: bash scripts/ci_migrations.sh
+
+      # ---------- резервное копирование ----------
+      - name: Бэкап и восстановление
+        run: bash scripts/ci_backup.sh
+
+      # ---------- контейнерная проверка ----------
+      - name: Контейнерная проверка
+        run: bash scripts/container_check.sh
+
+      # ---------- сборка образа ----------
+      - name: Сборка образа с тегом по commit SHA
         run: |
-          for f in quality.log pytest.log; do
-            if [ -f "$f" ]; then
-              msg=$(tail -n 30 "$f" | tr '\n' '|' | cut -c1-1500 | sed 's/%/%25/g; s/::/:/g')
-              echo "::error title=CI failure ($f)::$msg"
-            fi
-          done
+          docker buildx build --target runtime --load \
+            --cache-from type=gha --cache-to type=gha,mode=max \
+            -t devops16-app:$SHA_TAG -t devops16-app:ci .
+          docker images devops16-app --format '{{.Repository}}:{{.Tag}} {{.Size}}'
 
-      - name: Upload reports
+      # ---------- анализ образа ----------
+      - name: Анализ контейнерного образа (trivy, отчёт)
+        run: |
+          docker build -f ci/image-scan.Dockerfile -t image-scan . 2>&1 | tail -20
+
+      # ---------- публикация ----------
+      - name: Вход в реестр
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Публикация образа
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          IMAGE="ghcr.io/${{ github.repository }}"
+          docker tag devops16-app:$SHA_TAG "$IMAGE:$SHA_TAG"
+          docker push "$IMAGE:$SHA_TAG"
+          docker tag devops16-app:$SHA_TAG "$IMAGE:latest"
+          docker push "$IMAGE:latest"
+          echo "опубликован $IMAGE:$SHA_TAG"
+
+      # ---------- отчёты ----------
+      - name: Сохранить отчёты
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: reports
-          path: reports/
+          path: |
+            reports/
+            artifacts/
           if-no-files-found: warn
