@@ -131,11 +131,15 @@ else
     bad "контейнеры не стали healthy"
 fi
 
-health=$(curl -fsS -m 5 "$APP_URL/health" 2>/dev/null)
+# Проверяем изнутри контейнера: так работает и на хосте, и в DinD,
+# где опубликованный порт виден только внутри docker-демона.
+health=$($COMPOSE exec -T app python -c \
+    "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read().decode())" \
+    2>/dev/null)
 if [ -n "$health" ]; then
     ok "приложение отвечает: $health"
 else
-    bad "приложение не отвечает на $APP_URL/health"
+    bad "приложение не отвечает на /health"
 fi
 
 step "7. Сохранность данных"

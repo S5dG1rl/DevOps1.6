@@ -1,8 +1,9 @@
 import os
 
-# Тесты должны запускаться без .env и без реальных секретов:
-# задаём тестовые значения до импорта приложения.
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+# Тесты должны запускаться без .env и без реальных секретов.
+# DATABASE_URL можно переопределить снаружи: в CI тесты идут против
+# отдельной тестовой БД PostgreSQL, локально — против SQLite в памяти.
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault(
     "ENCRYPTION_KEY",
     "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
