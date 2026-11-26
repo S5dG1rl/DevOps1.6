@@ -169,11 +169,23 @@ $COMPOSE exec -T db psql -U app_db_user -d mountains_db -c \
 step "8. Корректное завершение"
 $COMPOSE up -d >/dev/null 2>&1
 wait_healthy app
+app_id=$($COMPOSE ps -q app 2>/dev/null)
 start=$(date +%s)
 $COMPOSE stop app >/dev/null 2>&1
 stop_time=$(( $(date +%s) - start ))
 
-if $COMPOSE logs app 2>/dev/null | grep -qiE 'shutting down|finished server process'; then
+# Логи читаем у конкретного контейнера и ждём до 5 секунд: строка
+# о завершении может появиться в журнале с задержкой.
+shutdown_ok=1
+for _ in $(seq 1 10); do
+    if [ -n "$app_id" ] && docker logs "$app_id" 2>&1 | grep -qiE 'shutting down|finished server process'; then
+        shutdown_ok=0
+        break
+    fi
+    sleep 0.5
+done
+
+if [ "$shutdown_ok" -eq 0 ]; then
     ok "приложение завершилось корректно (uvicorn обработал SIGTERM) за ${stop_time}s"
 else
     bad "в журнале нет корректного завершения"
