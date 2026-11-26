@@ -23,9 +23,6 @@ RUN pip install --no-cache-dir --no-compile -r requirements-dev.txt
 
 COPY . .
 
-# Один RUN: проверки и подготовка каталога для рантайма.
-# reports/ создаётся, потому что pytest.ini пишет туда отчёты, а .dockerignore
-# этот каталог из контекста исключает.
 RUN mkdir -p reports \
     && pytest -q \
     && ruff check . \
