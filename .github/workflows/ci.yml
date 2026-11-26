@@ -132,7 +132,8 @@ jobs:
       - name: Публикация образа
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          IMAGE="ghcr.io/${{ github.repository }}"
+          # GHCR требует имя репозитория в нижнем регистре.
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
           docker tag devops16-app:$SHA_TAG "$IMAGE:$SHA_TAG"
           docker push "$IMAGE:$SHA_TAG"
           docker tag devops16-app:$SHA_TAG "$IMAGE:latest"
