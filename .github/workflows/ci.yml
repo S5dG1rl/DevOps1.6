@@ -82,8 +82,32 @@ jobs:
         run: bash scripts/ci_backup.sh
 
       # ---------- контейнерная проверка ----------
+      - name: Тестовое окружение для compose
+        run: |
+          cat > .env <<'EOF'
+          APP_ENV=ci
+          APP_VERSION=0.3.0
+          LOG_LEVEL=INFO
+          DB_PASSWORD=ci-test-password
+          POSTGRES_DB=mountains_db
+          POSTGRES_USER=app_db_user
+          DATABASE_URL=postgresql://app_db_user:ci-test-password@db:5432/mountains_db
+          ENCRYPTION_KEY=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          JWT_SECRET_KEY=ci-test-jwt-secret
+          EOF
+          echo ".env для CI создан (не коммитится)"
+
       - name: Контейнерная проверка
-        run: bash scripts/container_check.sh
+        run: |
+          set -o pipefail
+          bash scripts/container_check.sh 2>&1 | tee container-check.log
+
+      - name: Детали контейнерной проверки
+        if: failure()
+        run: |
+          msg=$(tail -n 25 container-check.log 2>/dev/null | tr '\n' '|' | cut -c1-1800 | sed 's/%/%25/g; s/::/:/g')
+          echo "::error title=container-check::$msg"
+          docker compose logs app 2>&1 | tail -20 || true
 
       # ---------- сборка образа ----------
       - name: Сборка образа с тегом по commit SHA
